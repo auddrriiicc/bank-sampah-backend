@@ -6,19 +6,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Konfigurasi Database (Mendukung Aiven SSL & Environment Variables)
 const db = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'defaultdb',
-  port: process.env.DB_PORT || 3306,
-  ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false, // Aktifkan SSL jika di cloud
+  host: 'db-bank-sampah-living-lab.a.aivencloud.com',
+  port: 10930,
+  user: 'avnadmin',
+  password: 'AVNS_yZywdfugfIAbTlBzkjy',
+  database: 'defaultdb',
+  ssl: { rejectUnauthorized: false }, 
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
-
 // Endpoint Test Server
 app.get('/', (req, res) => {
   res.send('API Bank Sampah Berjalan Online!');
