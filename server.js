@@ -1,0 +1,69 @@
+const express = require('express');
+const cors = require('cors');
+const mysql = require('mysql2/promise');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Konfigurasi Database (Mendukung Aiven SSL & Environment Variables)
+const db = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'defaultdb',
+  port: process.env.DB_PORT || 3306,
+  ssl: process.env.DB_HOST ? { rejectUnauthorized: false } : false, // Aktifkan SSL jika di cloud
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+// Endpoint Test Server
+app.get('/', (req, res) => {
+  res.send('API Bank Sampah Berjalan Online!');
+});
+
+// Endpoint Login
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nama, username, role FROM users WHERE username = ? AND password = ?',
+      [username, password]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ status: 'error', message: 'Username atau password salah' });
+    }
+    res.json({ status: 'success', message: 'Login berhasil', user: rows[0] });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+// Endpoint Register
+app.post('/api/masyarakat/register', async (req, res) => {
+  const { nama, username, password, nik } = req.body;
+  try {
+    const [result] = await db.query(
+      'INSERT INTO users (nama, username, password, role, nik) VALUES (?, ?, ?, ?, ?)',
+      [nama, username, password, 'masyarakat', nik]
+    );
+    res.status(201).json({
+      status: 'success',
+      message: 'Registrasi berhasil',
+      data: { id: result.insertId, nama, username, role: 'masyarakat', nik }
+    });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ status: 'error', message: 'Username sudah digunakan' });
+    }
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+// Port dinamis untuk cloud server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server API berjalan di port ${PORT}`);
+});
